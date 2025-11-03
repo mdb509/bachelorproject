@@ -1,0 +1,1 @@
+# Convert game states to readable formats (for logging or export)

@@ -1,0 +1,1 @@
+# Represents the current round, history, and game status

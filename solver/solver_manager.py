@@ -1,0 +1,1 @@
+# Manages and switches between solver strategies
