@@ -3,9 +3,12 @@
 from game.board import Board
 from game.ruleset import DEFAULT_RULES
 
+
 def gameloop():
     print("=== Mastermind CLI ===")
-    print("Type colors as letters (e.g. RGBY). Type 'exit' to quit, 'save' to store, 'load' to resume.\n")
+    print(
+        "Type colors as letters (e.g. RGBY). Type 'exit' to quit, 'save' to store, 'load' to resume.\n"
+    )
 
     b = Board(rules=DEFAULT_RULES)
     b.initialize_game()
@@ -31,7 +34,6 @@ def gameloop():
             except Exception as e:
                 print(f"Error loading save: {e}")
                 continue
-
 
         # Make the guess
         try:
