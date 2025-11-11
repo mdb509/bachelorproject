@@ -1,4 +1,4 @@
-from ruleset import DEFAULT_RULES
+from .ruleset import DEFAULT_RULES
 
 
 class Guess:

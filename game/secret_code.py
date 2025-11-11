@@ -1,5 +1,5 @@
 import random
-from ruleset import DEFAULT_RULES
+from .ruleset import DEFAULT_RULES
 
 
 class Code:
@@ -15,7 +15,13 @@ class Code:
         """
         # Use default rules if
         self.rules = rules or DEFAULT_RULES
-        self.sequence = sequence or []
+        # --- Input normalization ---
+        if isinstance(sequence, str):
+            self.sequence = [c.upper() for c in sequence.replace(" ", "")]
+        elif sequence is None:
+            self.sequence = []
+        else:
+            self.sequence = [c.upper() for c in sequence]
 
         self.is_valid = False
         if self.sequence:
@@ -119,10 +125,10 @@ class Code:
     def __repr__(self):
         """Return a developer-friendly representation of the Code."""
         code_str = self.as_string()
-        rules_name = (
-            self.rules.get("name", "unnamed") if self.rules else "none"
+        rules_name = self.rules.get("name", "unnamed") if self.rules else "none"
+        return (
+            f"<Code sequence={code_str} length={len(self.sequence)} rules={rules_name}>"
         )
-        return f"<Code sequence={code_str} length={len(self.sequence)} rules={rules_name}>"
 
     def __str__(self):
         "Returns the guess sequence."

@@ -1,6 +1,9 @@
-from secret_code import Code
-from guess import Guess
-from ruleset import DEFAULT_RULES
+from .secret_code import Code
+from .guess import Guess
+from .ruleset import DEFAULT_RULES
+from state.game_state import GameState
+from state.persistence import *
+
 import random as rnd
 
 
@@ -10,10 +13,10 @@ class Board:
     def __init__(self, rules=None):
         """Initialize the board with a given ruleset."""
         self.rules = rules or DEFAULT_RULES
-        self.secret_code = None
+        self.secret_code = Code(rules=self.rules)
         self.guesses = []
         self.current_attempt = 0
-        self.max_attempts = rules.get("max_attempts", 10)
+        self.max_attempts = self.rules.get("max_attempts", 10)
         self.is_over = False
         self.is_won = False
 
@@ -34,7 +37,7 @@ class Board:
 
         # Check if new guess is falis
         if not new_guess.is_valid:
-            print("Invalid guess. Try again.")
+            print("Invalid input. Try again.")
             return None
 
         # Calculate feedback
@@ -71,10 +74,6 @@ class Board:
             self.is_won = True
             return
 
-    def get_current_state(self):
-        """Return a GameState snapshot for saving or analysis."""
-        pass
-
     def reveal_code(self):
         """Return the secret code (used at the end of the game)."""
         return self.secret_code.as_string()
@@ -87,32 +86,113 @@ class Board:
         """Return how many guesses are left."""
         return max(0, self.max_attempts - self.current_attempt)
 
-    def render(self):
+    def get_current_state(self):
+        """Return a GameState snapshot for saving or analysis."""
+        return GameState(
+            rules=self.rules,
+            guesses=[g for g in self.guesses],
+            current_attempts=self.current_attempt,
+            is_over=self.is_over,
+            is_won=self.is_won,
+            code=self.secret_code.as_string()
+        )
+
+    def save(self, filename="game_state.json"):
+        save_state(self.get_current_state(), filename)
+
+    @classmethod
+    def from_file(cls, filename):
+        state = load_state(filename)
+        board = cls(rules=state.rules)
+        board.guesses = []
+        for g in state.guesses:
+            guess_obj = Guess(g["guess"], rules=board.rules)
+            guess_obj.apply_feedback((g["feedback"][0], g["feedback"][1] ))
+            board.guesses.append(guess_obj)
+        board.current_attempt = state.current_attempts
+        board.is_over = state.is_over
+        board.is_won = state.is_won
+        board.secret_code = Code(state.secret_code, rules=board.rules)
+        return board
+
+    def render(self, width=8):
         """Render a text-based representation of the board (for CLI)."""
-        pass
+
+        colors = self.rules["display"]["emoji_map"]
+        title = "| +++++++++++++ Mastermind ++++++++++++ |"
+        colums = "| ++++ Guesses ++++ | ++++ Feedback +++ |"
+        line = "+----" * width + "+"
+
+        # build the gameboard
+        print(line)
+        print(title)
+        print(line)
+        print(colums)
+        print(line)
+        guess = self.guesses[-1] if len(self.guesses) > 0 else None
+        for guess in self.guesses:
+            attempt_line = ""
+            for c in guess.get_guess():
+                attempt_line += "| " + colors[c] + " "
+            black, white = guess.get_feedback()
+            for i in range(black):
+                attempt_line += "| " + colors["BK"] + " "
+            for i in range(white):
+                attempt_line += "| " + colors["W"] + " "
+            for i in range(max(0, 4 - black - white)):
+                attempt_line += "|    "
+            print(attempt_line + "|")
+            print(line)
 
 
 if __name__ == "__main__":
+    print("=== Mastermind CLI ===")
+    print("Type colors as letters (e.g. RGBY). Type 'exit' to quit, 'save' to store, 'load' to resume.\n")
+
     b = Board(rules=DEFAULT_RULES)
-    won = False
-    for i in range(10000):
-        b.initialize_game()
-        for j in range(10):
-            b.make_guess(
-                [
-                    rnd.choice(b.rules["colors"]),
-                    rnd.choice(b.rules["colors"]),
-                    rnd.choice(b.rules["colors"]),
-                    rnd.choice(b.rules["colors"]),
-                ]
-            )
-            if b.is_over:
-                print(b.get_feedback_history())
-                print(b.reveal_code())
-            if b.is_won:
-                print("WOOOOOOOOONN")
-                print(i)
-                won = True
-                break
-        if won:
+    b.initialize_game()
+
+    while not b.is_over:
+        print(f"\nAttempts left: {b.remaining_attempts()}")
+        print(f"Available colors: {', '.join(b.rules['colors'])}")
+        user_input = input("Enter your guess: ").strip().upper()
+
+        # handle special commands
+        if user_input == "EXIT":
+            print("Exiting game.")
             break
+        elif user_input == "SAVE":
+            b.save()
+            print("Game saved.")
+            continue
+        elif user_input == "LOAD":
+            try:
+                b = Board.from_file("game_state.json")
+                print("Game loaded.")
+                continue
+            except Exception as e:
+                print(f"Error loading save: {e}")
+                continue
+
+
+        # Make the guess
+        try:
+            b.make_guess(list(user_input))
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+            continue
+
+        # Render current board
+        b.render()
+
+        # Check win/loss
+        if b.is_won:
+            print("\n🎉 Congratulations, you cracked the code!")
+            print(f"The secret code was: {b.reveal_code()}")
+            break
+        elif b.is_over:
+            print("\n💀 No more attempts left.")
+            print(f"The secret code was: {b.reveal_code()}")
+            break
+
+    print("\n=== Game Over ===")
