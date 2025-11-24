@@ -1,11 +1,12 @@
 # state/game_state.py
-# Represents the current round, history, and game status
 
 
 class GameState:
     """Container for Mastermind game snapshot"""
 
-    def __init__(self, rules, guesses, current_attempts, is_over, is_won, code=None):
+    def __init__(
+        self, rules, guesses, current_attempts, is_over, is_won, code=None
+    ):
         self.rules = rules
         self.guesses = guesses
         self.current_attempts = current_attempts

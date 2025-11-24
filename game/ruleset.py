@@ -8,7 +8,6 @@ DEFAULT_RULES = {
     "feedback": {
         "black_pegs": True,  # Use black pegs for correct color + position
         "white_pegs": True,  # Use white pegs for correct color, wrong position
-        "ordered_feedback": False,  # If True, feedback pegs correspond to positions (rare variant)
     },
     "colors": [
         "R",

@@ -2,13 +2,14 @@ from .secret_code import Code
 from .guess import Guess
 from .ruleset import DEFAULT_RULES
 from state.game_state import GameState
-from state.persistence import *
-
-import random as rnd
+from state.persistence import save_state, load_state
 
 
 class Board:
-    """Main game board class — manages gameplay, secret code, and guess history."""
+    """
+    Main game board class — manages gameplay, secret code,
+    and guess history.
+    """
 
     def __init__(self, rules=None):
         """Initialize the board with a given ruleset."""
@@ -30,7 +31,10 @@ class Board:
         self.is_won = False
 
     def make_guess(self, guess_input):
-        """Create a Guess object from user input, evaluate it, and update state."""
+        """
+        Create a Guess object from user input, evaluate it,
+        and update state.
+        """
 
         # Create new guess
         new_guess = Guess(guess_input, rules=self.rules)

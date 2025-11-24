@@ -40,18 +40,30 @@
     {
       "guess": [
         "R",
-        "R",
-        "R",
-        "R"
+        "G",
+        "G",
+        "G"
       ],
       "feedback": [
         1,
         0
       ]
+    },
+    {
+      "guess": [
+        "G",
+        "G",
+        "G",
+        "G"
+      ],
+      "feedback": [
+        0,
+        0
+      ]
     }
   ],
-  "current_attempts": 1,
+  "current_attempts": 2,
   "is_over": false,
   "is_won": false,
-  "secret_code": "YORP"
+  "secret_code": "RYOR"
 }

@@ -51,7 +51,7 @@ def gameloop():
             print(f"The secret code was: {b.reveal_code()}")
             break
         elif b.is_over:
-            print("\n💀 No more attempts left.")
+            print("\nNo more attempts left.")
             print(f"The secret code was: {b.reveal_code()}")
             break
 

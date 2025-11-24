@@ -26,7 +26,10 @@ class Guess:
             self.is_valid = self.validate(strict=False)
 
     def validate(self, strict: bool = True):
-        """Check if the guess follows the rules (length, valid colors, duplicates)."""
+        """
+        Check if the guess follows the rules
+        (length, valid colors, duplicates).
+        """
 
         def fail(msg: str) -> bool:
             """Handle failure depending on strict mode."""
@@ -71,12 +74,6 @@ class Guess:
     def as_string(self):
         """Return a string representation of the guess (e.g. 'RGBY')."""
         return "".join(self.sequence) if self.sequence else "EMPTY"
-
-    def __repr__(self):
-        """Return a developer-friendly representation of the Guess."""
-        guess_str = self.as_string()
-        rules_name = self.rules.get("name", "unnamed") if self.rules else "none"
-        return f"<Guess sequence={guess_str} length={len(self.sequence)} rules={rules_name}>"
 
     def __str__(self):
         "Returns the guess sequence."
