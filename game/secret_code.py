@@ -3,7 +3,12 @@ from .ruleset import DEFAULT_RULES
 
 
 class Code:
-    """Represents the secret code for the Mastermind game."""
+    """
+        Represents the secret code for the Mastermind game.
+    Attributes:
+        sequence (list[str]): The sequence of colors representing the code.
+        rules (dict): The ruleset for validation.
+        is_valid (bool): Whether the code is valid according to the rules."""
 
     def __init__(self, sequence=None, rules=None):
         """
@@ -29,7 +34,9 @@ class Code:
             self.is_valid = self.validate()
 
     def generate_random(self):
-        """Generate a random valid code according to the rules."""
+        """
+        Generate a random valid code according to the rules.
+        """
 
         colors = self.rules["colors"]
         length = self.rules["code_length"]
@@ -136,17 +143,30 @@ class Code:
         return (black, white)
 
     def get_length(self):
-        """Return the length of the secrete code sequence from the rules."""
+        """
+        Return the length of the secrete code sequence from the rules.
+
+        Returns:
+            int: The length of the secret code sequence.
+        """
 
         return self.rules["code_length"]
 
     def get_available_colors(self):
-        """Return the list of allowed colors from the rules."""
+        """
+        Return the list of allowed colors from the rules.
+
+        Returns:
+            list[str]: The list of allowed color symbols."""
 
         return self.rules["colors"]
 
     def as_string(self):
-        """Return a string representation of the code (e.g. 'RGBY')."""
+        """
+        Return a string representation of the code (e.g. 'RGBY').
+        Returns:
+            str: The code as a string.
+        """
         return "".join(self.sequence) if self.sequence else "EMPTY"
 
     def __eq__(self, other):
@@ -167,5 +187,9 @@ class Code:
         return False
 
     def __str__(self):
-        "Returns the code sequence."
+        """
+        Returns the code sequence.
+        Returns:
+            str: The code as a string.
+        """
         return self.as_string()

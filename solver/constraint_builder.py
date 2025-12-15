@@ -1,241 +1,236 @@
-class cnf:
+from __future__ import annotations
+
+from itertools import combinations
+from state.game_state import GameState
+from game.guess import Guess
+
+
+class Cnf:
     """
-    A helper class for Mastermind that encodes the game state as CNF formulas.
+    Mastermind CNF encoder (correct + fast).
 
-    Given a sequence of guesses and their feedback, this class generates DIMACS
-    CNF clauses that capture all valid secret codes consistent with that
-    history. The resulting CNFs are intended to be used as input to a SAT
-    solver and form the basis for solver-driven Mastermind strategies
-    (e.g., to choose optimal next guesses or to enumerate all remaining
-    solutions).
+    Variables:
+      - Code variables: <Color>_<Pos>  (e.g. R_1)  -- these should be the first 24 vars.
+      - Global helper vars per color:
+          GE_<Color>_<t>  means: "the secret code contains at least t occurrences of <Color>"
+        plus small auxiliary AND vars for defining GE (only depends on code vars, not on guesses).
+
+    Per guess constraints:
+      - exactly black of the 4 "position-match" literals are true:
+          code_var(guess[i], i)
+      - exactly (black+white) of the 4 "overlap threshold" literals are true:
+          for each color c repeated gcount times in the guess, include GE_c_1 .. GE_c_gcount
+
+    Attributes:
+        game_state: The current game state.
+        guesses: List of Guess objects representing the history of guesses.
+        code_length: Length of the secret code.
+        num_colors: Number of possible colors.
+        colors: List of color identifiers.
+        code_vars: Tuple of variable names representing the code positions.
     """
 
-    def __init__(
-        self,
-    ):
-        pass
+    def __init__(self, game_state: GameState):
+        self.game_state = game_state
+        self.guesses = game_state.guesses
 
-    def combinations(self, vars: tuple[str], k: int) -> list[str]:
-        """
-        Generate all k-element combinations (unordered subsets) of the given
-        variables.
+        self.code_length = self.game_state.rules["code_length"]
+        self.num_colors = self.game_state.rules["num_colors"]
+        self.colors = self.game_state.rules["colors"]
 
-        This is recursive combinatorics helper used for encoding
-        cardinality constraints. Each combination is returned as a tuple
-        of variable names.
-
-        Args:
-            variables: Tuple of propositional variables (as strings).
-            k: Size of each combination (0 ≤ k ≤ len(variables)).
-
-        Returns:
-            A list of all k-element combinations, each as a tuple of variables.
-            For example, combinations(("x1", "x2", "x3"), 2) yields:
-            [("x1", "x2"), ("x1", "x3"), ("x2", "x3")].
-        """
-
-        # base cases
-        if k == 0:
-            return [()]
-        if k > len(vars):
-            return []
-        if len(vars) == 0:
-            return []
-
-        head = vars[0]
-        tail = vars[1:]
-
-        # with head, remains k-1 from tail
-        with_head = [
-            (head,) + comb for comb in self.combinations(tail, k - 1)
-        ]
-
-        # without head, remains k aus tail
-        without_head = self.combinations(tail, k)
-
-        return with_head + without_head
-
-    def k_subsets(self, vars: tuple[str], k: int) -> list[tuple[str]]:
-        """
-        Generate CNF clauses enforcing that **exactly** k of the given
-        variables are true.
-
-        This uses the naive cardinality encoding based on
-        combinations:
-
-        - "At least k" is encoded by adding, for every (n - k + 1)-subset S of
-        `variables`, a clause that requires at least one variable in S to
-        be true.
-        - "At most k" is encoded by adding, for every (k + 1)-subset S
-        of `variables`,a clause that forbids all variables in S from
-        being true at the same time.
-
-        Args:
-            variables: Tuple of propositional variables (as strings).
-            k: Number of variables that must be true.
-
-        Returns:
-            A list of CNF clauses, each clause represented as a tuple of
-            literals (e.g. ("x1", "-x3", "x7")). The conjunction of
-            all returned clauses is satisfied iff exactly k variables
-            from `variables` are true.
-        """
-
-        clauses = []
-        n = len(vars)
-
-        # At least k variables are true
-        for combo in self.combinations(vars, n - k + 1):
-            clauses.append(tuple(combo))
-
-        # At most k variables are true
-        for combo in self.combinations(vars, k + 1):
-            clauses.append(tuple(["-" + var for var in combo]))
-
-        return clauses
-
-    def sequential_cardinality_atmost(
-        self, vars: tuple[str], k: int, prefix: str
-    ):
-        """
-        Encodes the cardinality constraint sum(vars) <= k using a sequential
-        counter.
-
-        The encoding follows Sinz (2005) and introduces auxiliary variables
-        of the form f"{prefix}{i}{j}" to represent partial sums.
-
-        Args:
-            vars: Tuple of Boolean variable names (as strings) to which the
-                at-most constraint is applied.
-            k: Maximum number of variables in vars that may be true.
-            prefix: String prefix used for naming auxiliary counter variables
-                (e.g. "s" → "s11", "s12", ...).
-
-        Returns:
-            list[tuple[str, ...]]: CNF clauses enforcing sum(vars) <= k.
-            Each clause is a tuple of literals as strings, where a negated
-            literal is prefixed with "-" (e.g. "-x1").
-        """
-
-        n = len(vars)
-
-        # Base cases
-        if k == 0:
-            return [()]
-        if k > n:
-            return []
-        if len(vars) == 0:
-            return []
-
-        # Sequentilal counter translatet into cnf clauses
-        clauses = [("-" + vars[0], f"{prefix}11")]
-        for i in range(2, k + 1):
-            clauses.append((f"-{prefix}1" + str(i),))
-
-        for i in range(2, n):
-            clauses.append(("-" + vars[i - 1], f"{prefix}" + str(i) + "1"))
-            clauses.append(
-                (f"-{prefix}" + str(i - 1) + "1", f"{prefix}" + str(i) + "1")
-            )
-            for j in range(2, k + 1):
-                clauses.append(
-                    (
-                        "-" + vars[i - 1],
-                        f"-{prefix}" + str(i - 1) + str(j - 1),
-                        f"{prefix}" + str(i) + str(j),
-                    )
-                )
-                clauses.append(
-                    (
-                        f"-{prefix}" + str(i - 1) + str(j),
-                        f"{prefix}" + str(i) + str(j),
-                    )
-                )
-            clauses.append(
-                ("-" + vars[i - 1], f"-{prefix}" + str(i - 1) + str(k))
-            )
-        clauses.append(
-            ("-" + vars[n - 1], f"-{prefix}" + str(n - 1) + str(k))
+        # Code variables, should be first encountered in DIMACS
+        self.code_vars: tuple[str, ...] = tuple(
+            f"{c}_{i}"
+            for i in range(1, self.code_length + 1)
+            for c in self.colors
         )
 
+        # Base constraints (ONLY code vars): exactly one color per position
+        self._base_clauses: list[tuple[str, ...]] = []
+        self._base_clauses.extend(self._only_one_color())
+
+        # Global constraints that may introduce helper vars (GE_* and aux AND vars).
+        # these are appended AFTER base clauses so code vars get IDs 1..(colors*len)
+        self._global_clauses: list[tuple[str, ...]] = []
+        self._global_clauses.extend(self._define_all_ge_thresholds())
+
+    @staticmethod
+    def _neg(lit: str) -> str:
+        """Negate a literal string: x -> -x, -x -> x."""
+        return lit[1:] if lit.startswith("-") else "-" + lit
+
+    def _code_var(self, color: str, pos_1based: int) -> str:
+        return f"{color}_{pos_1based}"
+
+    def _ge_var(self, color: str, t: int) -> str:
+        """GE_<color>_<t> : code contains at least t occurrences of color."""
+        return f"GE_{color}_{t}"
+
+    def _and_aux(self, color: str, t: int, combo_idx: int) -> str:
+        """Aux var for 'AND of a particular combination' used in GE definitions."""
+        return f"A_{color}_{t}_{combo_idx}"
+
+    def _exactly_k(self, lits: tuple[str, ...], k: int) -> list[tuple[str, ...]]:
+        """
+        Naive exactly-k encoding via combinations.
+        Perfect for n=4 (very small and avoids sequential-counter aux vars).
+
+        Args:
+            lits: Tuple of literals.    
+        Returns:
+            List of clauses encoding "exactly k of lits are true".
+        """
+        # Basic cases
+        n = len(lits)
+        if k < 0 or k > n:
+            return [()] 
+        clauses: list[tuple[str, ...]] = []
+
+        # At most k: for every (k+1)-subset, not all can be true
+        for combo in combinations(lits, k + 1):
+            clauses.append(tuple(self._neg(v) for v in combo))
+
+        # At least k: for every (n-k+1)-subset, at least one must be true
+        for combo in combinations(lits, n - k + 1):
+            clauses.append(tuple(combo))
+
         return clauses
 
-    def resolve_double_negation(self, clauses: list[tuple[str]]):
+    # Base clauses: exactly one color per position
+    def _only_one_color(self) -> list[tuple[str, ...]]:
         """
-        Simplifies CNF clauses by removing double negations in literals.
-
-        Args:
-            clauses (list[tuple[str]): List of clauses, each a tuple of
-            literal strings (e.g. "x1", "-x1", "--x1").
+        Each position must have exactly one color.
 
         Returns:
-            list[tuple[str]: A new list of clauses with all "--"
-            substrings removed from literals (e.g. "--x1" → "x1").
+            List of clauses encoding the constraints."""
+
+        clauses: list[tuple[str, ...]] = []
+        n = self.code_length
+        m = self.num_colors
+
+        for pos in range(1, n + 1):
+            vars_at_pos = tuple(
+                self.code_vars[(pos - 1) + n * color_idx]
+                for color_idx in range(m)
+            )
+            clauses.extend(self._exactly_k(vars_at_pos, 1))
+        return clauses
+
+    # Global clauses: define GE_<c>_<t> vars
+    def _define_all_ge_thresholds(self) -> list[tuple[str, ...]]:
         """
-
-        result = []
-
-        for claus in clauses:
-            result.append(tuple([var.replace("--", "") for var in claus]))
-
-        return result
-
-    def variables_negation(self, vars: tuple[str]):
-        """
-        Negates all variables in a tuple of strings.
-
-        Args:
-            vars: Tuple of variable names as strings, e.g. ("X1", "X2", "X3").
+        Defines GE_<color>_<t> for all colors and t=1..code_length.
+        These constraints depend ONLY on code vars, so they are shared across all guesses.
 
         Returns:
-            tuple[str, ...]: Tuple of negated variable names, e.g.
-                ("X1", "X2", "X3") -> ("-X1", "-X2", "-X3").
+            List of clauses encoding the GE definitions.
         """
-        return tuple(["-" + var for var in vars])
+        clauses: list[tuple[str, ...]] = []
+        n = self.code_length
 
+        for c in self.colors:
+            x = tuple(self._code_var(c, i) for i in range(1, n + 1))
 
-if __name__ == "__main__":
-    c = cnf()
-    # variables = ("A", "B", "C", "D", "E", "F")
-    # clauses = c.k_subsets(variables, 3)
-    # subsets = c.combinations(variables, 3)
-    # print(clauses)
-    # print(subsets)
+            # --- GE(c,1) <-> OR_i x_i ---
+            ge1 = self._ge_var(c, 1)
+            # x_i -> GE1
+            for xi in x:
+                clauses.append((self._neg(xi), ge1))
+            # GE1 -> (x1 OR x2 OR ... OR xn)
+            clauses.append((self._neg(ge1),) + x)
 
-    vars = (
-        "m11",
-        "m12",
-        "m13",
-        "m14",
-        "m21",
-        "m22",
-        "m23",
-        "m24",
-        "m31",
-        "m32",
-        "m33",
-        "m34",
-        "m41",
-        "m42",
-        "m43",
-        "m44",
-    )
+            # --- GE(c,t) for t=2..n ---
+            for t in range(2, n + 1):
+                ge = self._ge_var(c, t)
 
-    neg_vars = c.variables_negation(vars)
+                # Create aux vars for each t-subset AND, then GE <-> OR(aux)
+                aux_vars: list[str] = []
+                for idx, pos_subset in enumerate(combinations(range(n), t), start=1):
+                    a = self._and_aux(c, t, idx)
+                    aux_vars.append(a)
 
-    atmost_clauses = c.sequential_cardinality_atmost(vars, 3, "atmost")
-    print(atmost_clauses)
+                    # a -> each x in subset: (¬a ∨ x)
+                    for p in pos_subset:
+                        clauses.append((self._neg(a), x[p]))
 
-    atleast_clauses = c.sequential_cardinality_atmost(
-        neg_vars, 16 - 3, "atleast"
-    )
-    print(atleast_clauses)
+                    # (x1 ∧ x2 ∧ ... ∧ xt) -> a  == (a ∨ ¬x1 ∨ ¬x2 ...)
+                    clauses.append((a,) + tuple(self._neg(x[p]) for p in pos_subset))
 
-    resolved_at_least_clauses = c.resolve_double_negation(atleast_clauses)
-    print(resolved_at_least_clauses)
+                    # aux -> GE : (¬a ∨ GE)
+                    clauses.append((self._neg(a), ge))
 
-    exakt_k_clauses = c.k_subsets(vars, 3)
-    print(exakt_k_clauses)
-    print("length at most clauses: ", len(atmost_clauses))
-    print("length at least clauses: ", len(resolved_at_least_clauses))
-    print("length exackt clauses with naiv: ", len(exakt_k_clauses))
+                # GE -> OR(aux): (¬GE ∨ a1 ∨ a2 ∨ ...)
+                clauses.append((self._neg(ge),) + tuple(aux_vars))
+
+                # Monotonic helper: GE(c,t) -> GE(c,t-1)
+                clauses.append((self._neg(ge), self._ge_var(c, t - 1)))
+
+        return clauses
+
+    # Per-guess constraints (correct Mastermind semantics)
+    def build_constraints(self, guess: Guess, guess_index: int, base_clauses: bool = False) -> list[tuple[str, ...]]:
+        """
+        Build constraints for ONE guess+feedback.
+
+        Args:
+            guess: The Guess object containing the guess and feedback.
+            guess_index: Index of the guess in the history (not used here).
+            base_clauses: If True, include base clauses (only needed once).
+        Returns:
+            List of clauses encoding the constraints for this guess.    
+        
+        """
+        try:
+            black, white = guess.get_feedback()
+        except TypeError:
+            return []
+
+        overlap = black + white
+        n = self.code_length
+
+        gseq = guess.get_guess()  # list[str] length n
+
+        clauses: list[tuple[str, ...]] = []
+        if base_clauses:
+            clauses.extend(self._base_clauses)
+            clauses.extend(self._global_clauses)
+
+        # --- Black pegs: exactly 'black' positions match ---
+        black_lits = tuple(self._code_var(gseq[i], i + 1) for i in range(n))
+        clauses.extend(self._exactly_k(black_lits, black))
+
+        # --- Total overlap (black+white): sum_c min(count(code,c), count(guess,c)) ---
+        # For each color c that appears gcount times in the guess,
+        # include GE(c,1) ... GE(c,gcount). Total number of these lits is always n.
+        gcount = {c: 0 for c in self.colors}
+        for col in gseq:
+            gcount[col] += 1
+
+        overlap_lits: list[str] = []
+        for c in self.colors:
+            for t in range(1, gcount[c] + 1):
+                overlap_lits.append(self._ge_var(c, t))
+
+        clauses.extend(self._exactly_k(tuple(overlap_lits), overlap))
+
+        return clauses
+
+    def build_constraints_for_history(self) -> list[tuple[str, ...]]:
+        """
+        Build constraints for the full game history.
+        IMPORTANT ordering:
+          1) base clauses (code vars only) -> ensures code vars get IDs first
+          2) global GE/aux clauses
+          3) per-guess clauses
+        Returns:
+            List of clauses encoding the constraints for the full history.
+        """
+        clauses: list[tuple[str, ...]] = []
+        clauses.extend(self._base_clauses)
+        clauses.extend(self._global_clauses)
+
+        for i, guess in enumerate(self.guesses):
+            clauses.extend(self.build_constraints(guess, i))
+
+        return clauses
+

@@ -9,10 +9,33 @@ class Board:
     """
     Main game board class — manages gameplay, secret code,
     and guess history.
+
+    Attributes:
+        rules (dict): The ruleset for the game.
+        secret_code (Code): The secret code to be guessed.
+        guesses (list): List of Guess objects representing past guesses.
+        current_attempt (int): The current attempt number.
+        max_attempts (int): Maximum number of allowed attempts.
+        is_over (bool): Flag indicating if the game is over.
+        is_won (bool): Flag indicating if the game has been won.
     """
 
     def __init__(self, rules=None):
-        """Initialize the board with a given ruleset."""
+        """
+        Initialize the board with a given ruleset.
+
+        Args:
+            rules (dict, optional): The ruleset to use for the game. Defaults to DEFAULT_RULES.
+
+        Attributes:
+        rules (dict): The ruleset for the game.
+        secret_code (Code): The secret code to be guessed.
+        guesses (list): List of Guess objects representing past guesses.
+        current_attempt (int): The current attempt number.
+        max_attempts (int): Maximum number of allowed attempts.
+        is_over (bool): Flag indicating if the game is over.
+        is_won (bool): Flag indicating if the game has been won.
+        """
         self.rules = rules or DEFAULT_RULES
         self.secret_code = Code(rules=self.rules)
         self.guesses = []
@@ -22,7 +45,9 @@ class Board:
         self.is_won = False
 
     def initialize_game(self):
-        """Set up a new game: generate a secret code and reset state."""
+        """
+        Set up a new game: generate a secret code and reset state.
+        """
         self.secret_code = Code(rules=self.rules)
         self.secret_code.generate_random()
         self.guesses = []
@@ -34,6 +59,11 @@ class Board:
         """
         Create a Guess object from user input, evaluate it,
         and update state.
+
+        Args:
+            guess_input (list[str] | str): The player's guess input.
+        Returns:
+            None if the guess is invalid, otherwise updates the board state.
         """
 
         # Create new guess
@@ -58,7 +88,13 @@ class Board:
         self.check_game_over()
 
     def get_feedback_history(self):
-        """Return the full history of guesses and feedback."""
+        """
+        Return the full history of guesses and feedback.
+
+        Returns:
+            list[tuple[list[str], tuple[int, int]]]: List of tuples containing
+            each guess and its corresponding feedback.
+        """
         result = []
         for guess in self.guesses:
             result.append((guess.get_guess(), (guess.get_feedback())))
@@ -66,7 +102,11 @@ class Board:
         return result
 
     def check_game_over(self):
-        """Check if the game is finished (win or all attempts used)."""
+        """
+        Check if the game is finished (win or all attempts used).
+
+        Updates is_over and is_won attributes accordingly.
+        """
         if self.remaining_attempts() <= 0:
             self.is_over = True
             return
@@ -79,22 +119,36 @@ class Board:
             return
 
     def reveal_code(self):
-        """Return the secret code (used at the end of the game)."""
+        """
+        Return the secret code (used at the end of the game).
+
+        Returns:
+            str: The secret code as a string.
+        """
         return self.secret_code.as_string()
 
     def reset(self):
-        """Reset the board for a new game with the same rules."""
+        """
+        Reset the board for a new game with the same rules.
+        """
         self.initialize_game()
 
     def remaining_attempts(self):
-        """Return how many guesses are left."""
+        """
+        Return how many guesses are left.
+        Returns:
+            int: Number of remaining attempts."""
         return max(0, self.max_attempts - self.current_attempt)
 
     def get_current_state(self):
-        """Return a GameState snapshot for saving or analysis."""
+        """
+        Return a GameState snapshot for saving or analysis.
+        Returns:
+            GameState: The current game state.
+        """
         return GameState(
             rules=self.rules,
-            guesses=[g for g in self.guesses],
+            guesses=self.guesses,
             current_attempts=self.current_attempt,
             is_over=self.is_over,
             is_won=self.is_won,
@@ -102,10 +156,17 @@ class Board:
         )
 
     def save(self, filename="game_state.json"):
+        """Save the current game state to a file."""
         save_state(self.get_current_state(), filename)
 
     @classmethod
     def from_file(cls, filename):
+        """
+        Load a Board instance from a saved game state file.
+        Args:
+            filename (str): The file to load the game state from.
+        Returns:
+            Board: The loaded Board instance."""
         state = load_state(filename)
         board = cls(rules=state.rules)
         board.guesses = []
@@ -120,7 +181,11 @@ class Board:
         return board
 
     def render(self, width=8):
-        """Render a text-based representation of the board (for CLI)."""
+        """
+        Render a text-based representation of the board (for CLI).
+        Args:
+            width (int): The width of the board display.
+        """
 
         colors = self.rules["display"]["emoji_map"]
         title = "| +++++++++++++ Mastermind ++++++++++++ |"

@@ -5,6 +5,8 @@ from game.ruleset import DEFAULT_RULES
 
 
 def gameloop():
+    """
+    Main game loop for the CLI version of Mastermind."""
     print("=== Mastermind CLI ===")
     print(
         "Type colors as letters (e.g. RGBY). Type 'exit' to quit, 'save' to store, 'load' to resume.\n"

@@ -2,10 +2,22 @@ from .ruleset import DEFAULT_RULES
 
 
 class Guess:
-    """Represents a single player guess in the Mastermind game."""
+    """
+        Represents a single player guess in the Mastermind game.
+    Attributes:
+        sequence (list[str]): The guessed sequence of colors.
+        rules (dict): The ruleset for validation.
+        black_pegs (int | None): Number of correct colors in correct positions.
+        white_pegs (int | None): Number of correct colors in wrong positions.
+        is_valid (bool): Whether the guess is valid according to the rules."""
 
-    def __init__(self, sequence, rules=None):
-        """Initialize a Guess instance."""
+    def __init__(self, sequence: list[str] | str | None, rules=None):
+        """
+        Initialize a Guess instance.
+        Args:
+            sequence (list[str] | str | None): The guessed sequence.
+            rules (dict, optional): The ruleset for validation. Defaults to DEFAULT_RULES.
+        """
 
         # --- Input normalization ---
         if isinstance(sequence, str):
@@ -29,10 +41,21 @@ class Guess:
         """
         Check if the guess follows the rules
         (length, valid colors, duplicates).
+
+        Args:
+            strict (bool): If True, raise ValueError on invalid guess.
+        Returns:
+            bool: True if valid, False otherwise.
         """
 
         def fail(msg: str) -> bool:
-            """Handle failure depending on strict mode."""
+            """
+            Handle failure depending on strict mode.
+            Args:
+                msg (str): The error message.
+            Returns:
+                bool: Always False.
+            """
             if strict:
                 raise ValueError(msg)
             return False
@@ -59,22 +82,40 @@ class Guess:
         return True
 
     def apply_feedback(self, feedback: tuple[int, int]):
-        """Store feedback values after evaluation by the Board/Code."""
+        """
+        Store feedback values after evaluation by the Board/Code.
+        Args:
+            feedback (tuple[int, int]): (black_pegs, white_pegs)
+        """
         self.black_pegs = feedback[0]
         self.white_pegs = feedback[1]
 
     def get_feedback(self):
-        """Return the stored feedback as a tuple (black_pegs, white_pegs)."""
+        """
+        Return the stored feedback as a tuple (black_pegs, white_pegs).
+        Returns:
+            tuple[int, int]: The feedback tuple.
+        """
         return (self.black_pegs, self.white_pegs)
 
     def get_guess(self):
-        """Return the stored guess."""
+        """
+        Return the stored guess.
+
+        Returns:
+            list[str]: The guess sequence."""
         return self.sequence
 
     def as_string(self):
-        """Return a string representation of the guess (e.g. 'RGBY')."""
+        """
+        Return a string representation of the guess (e.g. 'RGBY').
+        Returns:
+            str: The guess as a string."""
         return "".join(self.sequence) if self.sequence else "EMPTY"
 
     def __str__(self):
-        "Returns the guess sequence."
+        """
+        String representation of the Guess instance.
+        Returns:
+            str: The guess as a string."""
         return self.as_string()
