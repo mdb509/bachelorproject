@@ -124,7 +124,6 @@ class MinimaxSolver:
             encoded_base_clauses: The base clauses already encoded.
             guess_sequence: The guess sequence as a tuple of strings.
             fb: The feedback tuple (correct positions, correct colors).
-            guess_index: The index of the guess.
             stop_event: threading.Event - Event to signal stopping.
         Returns:
             A tuple containing the count of solutions and a list of solution tuples.
@@ -168,7 +167,6 @@ class MinimaxSolver:
         encoder: Cnf,
         encoded_base_clauses,
         guess_sequence: tuple[str, ...],
-        guess_index: int,
         stop_event: threading.Event,
     ) -> tuple[tuple[str, ...], int, tuple[int, int] | None]:
         """
@@ -177,7 +175,6 @@ class MinimaxSolver:
             encoder: Cnf - The CNF encoder.
             encoded_base_clauses: The base clauses already encoded.
             guess_sequence: The guess sequence as a tuple of strings.
-            guess_index: The index of the guess.
             stop_event: threading.Event - Event to signal stopping.
         Returns:
             A tuple containing the guess sequence, worst-case count, and worst feedback.
@@ -216,7 +213,6 @@ class MinimaxSolver:
         encoded_base_clauses,
         best_guess: tuple[str, ...],
         best_max_fb: tuple[int, int] | None,
-        guess_index: int,
         stop_event: threading.Event,
     ) -> list[str] | None:
         """
@@ -226,7 +222,6 @@ class MinimaxSolver:
             encoded_base_clauses: The base clauses already encoded.
             best_guess: The best guess sequence as a tuple of strings.
             best_max_fb: The feedback tuple (correct positions, correct colors).
-            guess_index: The index of the guess.
             stop_event: threading.Event - Event to signal stopping.
         Returns:
             A list of strings representing the model guess, or None if not found.
@@ -255,14 +250,13 @@ class MinimaxSolver:
             g = Guess(list(best_guess))
             g.apply_feedback(feedback=fb)
 
-            claus = encoder.build_constraints(g, guess_index=guess_index)
+            claus = encoder.build_constraints(g)
 
             with self.dinmacs_lock:
                 encoded_delta = self.dinmacs.encode_clauses(claus)
                 solv_clauses = encoded_base_clauses + encoded_delta
                 self.dinmacs.build_dinmacs(
                     str(cnf_path),
-                    guess_index=guess_index,
                     clauses=solv_clauses,
                 )
 
@@ -287,7 +281,6 @@ class MinimaxSolver:
         *,
         encoder: Cnf,
         encoded_base_clauses,
-        guess_index: int = 0,
         progress: bool = True,
     ) -> tuple[
         tuple[str, ...], int, tuple[int, int] | None, list[str] | None
@@ -297,7 +290,6 @@ class MinimaxSolver:
         Args:
             encoder: Cnf - The CNF encoder.
             encoded_base_clauses: The base clauses already encoded.
-            guess_index: The index of the guess.
             progress: bool - Whether to show progress output.
         Returns:
           best_guess, best_worst_case, best_worst_fb, optional_model_guess
@@ -325,7 +317,6 @@ class MinimaxSolver:
                         encoder=encoder,
                         encoded_base_clauses=encoded_base_clauses,
                         guess_sequence=gs,
-                        guess_index=guess_index,
                         stop_event=stop_event,
                     )
                 )
@@ -367,12 +358,11 @@ class MinimaxSolver:
                 ):
                     tried_models = True
                     # get model for best guess + feedback
-                    model_guess = self.try_get_model_guess(
+                    model_guess = self._try_get_model_guess(
                         encoder=encoder,
                         encoded_base_clauses=encoded_base_clauses,
                         best_guess=best_guess,
                         best_max_fb=best_minmax_fb,
-                        guess_index=guess_index,
                         stop_event=stop_event,
                     )
                     # if we got a model guess, we can stop early

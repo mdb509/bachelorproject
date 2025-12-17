@@ -191,7 +191,6 @@ class Cnf:
 
         Args:
             guess: The Guess object containing the guess and feedback.
-            guess_index: Index of the guess in the history (not used here).
             base_clauses: If True, include base clauses (only needed once).
         Returns:
             List of clauses encoding the constraints for this guess.
@@ -246,4 +245,5 @@ class Cnf:
 
         for guess in self.guesses:
             clauses.extend(self.build_constraints(guess))
+        print("length of clauses", len(clauses))
         return clauses

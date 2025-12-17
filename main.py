@@ -57,12 +57,12 @@ if __name__ == "__main__":
     # temp directory for Dinmacs and solver files
     with tempfile.TemporaryDirectory(prefix="cnfs_", dir=tmp_root) as tmpdir:
         # Auto-play multiple games and collect statistics
-        needed_attempts = 0
+        needed_attempts = []
         times = []
         counter = 0
 
-        # Play games until we have at least 6 attempts in one of them or reach 5 games
-        while needed_attempts < 6 and counter < 5:
+        # Play 10 games
+        while  counter < 10:
             counter += 1
             start_time = time.perf_counter()
 
@@ -112,7 +112,6 @@ if __name__ == "__main__":
                 best_guess, wc, wc_fb, model_guess = mm.choose_guess(
                     encoder=encoder,
                     encoded_base_clauses=encoded_base_clauses,
-                    guess_index=0,
                     progress=True,
                 )
 
@@ -147,7 +146,7 @@ if __name__ == "__main__":
             elif board.is_over:
                 print("\nGame over! You've used all attempts.")
 
-            needed_attempts = board.current_attempt
+            needed_attempts.append(board.current_attempt)
             print(counter)
         
         # Print overall statistics
@@ -159,3 +158,10 @@ if __name__ == "__main__":
         print(f"Max time over {len(times)} games: {max_time:.2f} seconds.")
         min_time = min(times)
         print(f"Min time over {len(times)} games: {min_time:.2f} seconds.")
+        avg_attempts = sum(needed_attempts) / 10
+        print(f"Average attempts over {len(times)} games: {avg_attempts:.2f} attempts.")
+        max_attempts = max(needed_attempts)
+        print(f"Max attempts over {len(times)} games: {max_attempts} attempts.")
+        min_attempts = min(needed_attempts)
+        print(f"Min attempts over {len(times)} games: {min_attempts} attempts.")
+
