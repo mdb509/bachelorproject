@@ -1,0 +1,38 @@
+{
+  "rules": {
+    "name": "classic",
+    "code_length": 4,
+    "num_colors": 6,
+    "allow_duplicates": true,
+    "max_attempts": 10,
+    "feedback": {
+      "black_pegs": true,
+      "white_pegs": true
+    },
+    "colors": [
+      "R",
+      "G",
+      "B",
+      "Y",
+      "O",
+      "P"
+    ],
+    "display": {
+      "emoji_map": {
+        "R": "\ud83d\udd34",
+        "G": "\ud83d\udfe2",
+        "B": "\ud83d\udd35",
+        "Y": "\ud83d\udfe1",
+        "O": "\ud83d\udfe0",
+        "P": "\ud83d\udfe3",
+        "BK": "\u26ab",
+        "W": "\u26aa"
+      }
+    }
+  },
+  "guesses": [],
+  "current_attempts": 0,
+  "is_over": false,
+  "is_won": false,
+  "secret_code": "YGBR"
+}

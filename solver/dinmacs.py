@@ -1,5 +1,10 @@
 from typing import Sequence
 import os
+from game.ruleset import DEFAULT_RULES
+from pathlib import Path
+
+CODE_LENGTH = DEFAULT_RULES["code_length"]
+NUM_COLORS = DEFAULT_RULES["num_colors"]
 
 
 class Dinmacs:
@@ -88,9 +93,7 @@ class Dinmacs:
         """
         return [self.decode_clause(c) for c in clauses]
 
-    def build_dinmacs(
-        self, path: str, guess_index: int, clauses: Sequence[Sequence[int]]
-    ):
+    def build_dinmacs(self, path: str, clauses: Sequence[Sequence[int]]):
         """
         Write the DINMACS file to disk.
         Args:
@@ -99,6 +102,15 @@ class Dinmacs:
             clauses (Sequence[Sequence[int]]): The clauses to write.
         """
         with open(path, "w", encoding="utf-8") as f:
-            f.write(f"c Encoding for guess {guess_index}\n")
+            f.write(f"c t pmc\n")
             f.write(f"p cnf {len(self.name_to_id)} {len(clauses)}\n")
-            f.writelines((" ".join(map(str, claus)) + " 0\n" for claus in clauses))
+            f.writelines(
+                (" ".join(map(str, claus)) + " 0\n" for claus in clauses)
+            )
+            f.write(
+                "c p show "
+                + " ".join(
+                    str(i) for i in range(1, NUM_COLORS * CODE_LENGTH + 1)
+                )
+                + " 0\n"
+            )

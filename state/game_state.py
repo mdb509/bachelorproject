@@ -3,6 +3,7 @@ from game.ruleset import DEFAULT_RULES
 from game.guess import Guess
 from game.secret_code import Code
 
+
 class GameState:
     """
     Container for Mastermind game snapshot

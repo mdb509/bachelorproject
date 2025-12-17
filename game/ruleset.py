@@ -29,9 +29,4 @@ DEFAULT_RULES = {
             "W": "⚪",
         }
     },
-    "variant_flags": {
-        "reverse_mode": False,  # If True, computer guesses your code
-        "no_white_feedback": False,  # Simplified "hard" variant
-        "time_limit": None,  # Optional timer (seconds) for each guess
-    },
 }
