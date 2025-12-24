@@ -160,7 +160,7 @@ class Cnf:
                     a = self._and_aux(c, t, idx)
                     aux_vars.append(a)
 
-                    # a <-> (x_p1 ∧ x_p2 ∧ ... ∧ x_pt) is encoded as:
+                    # a <-> (x1 ∧ x2 ∧ ... ∧ xt) is encoded as:
 
                     # a -> (x1 ∧ x2 ∧ ... ∧ xt) == (¬a ∨ x1) ∧ (¬a ∨ x2) ... (¬a ∨ xt)
                     for p in pos_subset:

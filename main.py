@@ -11,25 +11,30 @@ from game.ruleset import DEFAULT_RULES
 from solver.constraint_builder import Cnf
 from solver.dinmacs import Dinmacs
 from solver.solver_manager import MinimaxConfig, MinimaxSolver
-from solver.sat_solver_interface import SatSolverInterface
+from solver.solver_interface import SatSolverInterface
 from state.persistence import save_state
+from ui.cli import gameloop
 
 
 # Config
 code_length = DEFAULT_RULES["code_length"]
 num_colors = DEFAULT_RULES["num_colors"]
 colors = DEFAULT_RULES["colors"]
-backend = "dualiza"  # "dualiza" | "ganak"
+backend = "bc_enum"  # "dualiza" | "ganak" | "bc_enum"
+rounds_to_play = 10
 
 # Create symbol variables
+# e.g. R1, R2, ..., Y4
 symbol_variable = [
     c + str(j) for j in range(1, code_length + 1) for c in colors
 ]
 # Create dualizer variables
+# e.g. x1, x2, ..., x24
 dualier_variable = [
     "x" + str(i) for i in range(1, (code_length * num_colors) + 1)
 ]
 # Create decode map
+# e.g. x1 -> R1, x2 -> R2, ..., x24 -> P4
 decode_variable_map = {
     dualier_variable[i]: symbol_variable[i]
     for i in range(code_length * num_colors)
@@ -39,8 +44,37 @@ decode_variable_map = {
 projected_variables = ",".join(
     str(i) for i in range(1, (code_length * num_colors) + 1)
 )
+# Dualiza counting arguments
 dualiza_counting = ["-c", "-r", projected_variables]
-dualiza_models = ["-e", "-r", projected_variables]
+# Dualiza minimal prep arguments
+dualiza_minimal_prep_args = ["-c",
+    "-r", projected_variables,
+    "--project=1",
+    "--dual=1",
+    "--discount=1",
+    "--block=0",
+    "--elim=0",
+    "--subsume=0",
+    "--sublearned=0",]
+
+# unweighted Ganak arguments
+default_ganak_args = ["--mode", "0"]
+# approximate unweighted Ganak arguments
+approx_ganak_args = ["--mode", "0", "--appmct", "1"]
+# disable probabilistic techniques ganak
+no_prob_ganak_args = ["--mode", "0", "--prob", "0"]
+# minimal prep args ganak
+minimal_prep_ganak_args = ["--mode", "0",
+                            "--arjun", "0",
+                            "--puura", "0",
+                            "--td", "false",
+                            "--bce", "false",
+                            "--vivif", "0",
+                            "--sbvasteps", "0",
+                            "--extraoracle", "false"
+        ]
+
+tool_args = dualiza_minimal_prep_args
 
 # All possible feedbacks
 feedbacks = [
@@ -50,24 +84,30 @@ feedbacks = [
     if not (b == 3 and w == 1)
 ]
 
+# All possible code combinations
+all_combinations = list(product(colors, repeat=code_length))
+
+
 
 if __name__ == "__main__":
+    # Use /dev/shm if available for faster temp file operations
     tmp_root = "/dev/shm" if os.path.isdir("/dev/shm") else None
 
-    # temp directory for Dinmacs and solver files
-    with tempfile.TemporaryDirectory(prefix="cnfs_", dir=tmp_root) as tmpdir:
-        # Auto-play multiple games and collect statistics
-        needed_attempts = []
-        times = []
-        counter = 0
-
-        # Play 10 games
-        while  counter < 10:
+    # Statistics
+    needed_attempts = []
+    times = []
+    counter = 0
+    # Main game loop
+    while  counter < 1:
+        # temp directory for Dinmacs and solver files
+        with tempfile.TemporaryDirectory(prefix="cnfs_", dir=tmp_root) as tmpdir:
+            # Auto-play multiple games and collect statistics
             counter += 1
             start_time = time.perf_counter()
 
             # Initialize game board
             board = Board()
+            # board.initialize_game(all_combinations[counter - 1])
             board.initialize_game()
             print(board.reveal_code())  # debug
 
@@ -80,8 +120,8 @@ if __name__ == "__main__":
             dinmacs = Dinmacs()
             dinmacs_lock = threading.Lock()
             solver_api = SatSolverInterface()
-            solver_api.build_dualiza()
-            # solver_api.build_ganak()  # not using yet
+            solver_api.build_tool("dualiza")
+            solver_api.build_tool("bc_enum")
             mm = MinimaxSolver(
                 config=MinimaxConfig(backend=backend),
                 solver_api=solver_api,
@@ -92,8 +132,7 @@ if __name__ == "__main__":
                 code_length=code_length,
                 num_colors=num_colors,
                 decode_variable_map=decode_variable_map,
-                dualiza_counting_args=dualiza_counting,
-                dualiza_models_args=dualiza_models,
+                tool_args=tool_args,
                 feedbacks=feedbacks,
             )
 
@@ -109,18 +148,14 @@ if __name__ == "__main__":
                     )
 
                 # Choose the next guess using Minimax strategy
-                best_guess, wc, wc_fb, model_guess = mm.choose_guess(
+                best_guess = mm.choose_guess(
                     encoder=encoder,
                     encoded_base_clauses=encoded_base_clauses,
                     progress=True,
                 )
 
                 # Make the guess on the board
-                if model_guess is not None:
-                    print(f"\nSolution guess: {model_guess}")
-                    board.make_guess(model_guess)
-                else:
-                    board.make_guess(list(best_guess))
+                board.make_guess(list(best_guess))
 
                 # Render the board
                 board.render()
@@ -147,7 +182,6 @@ if __name__ == "__main__":
                 print("\nGame over! You've used all attempts.")
 
             needed_attempts.append(board.current_attempt)
-            print(counter)
         
         # Print overall statistics
         avg_time = sum(times) / len(times)
@@ -158,10 +192,9 @@ if __name__ == "__main__":
         print(f"Max time over {len(times)} games: {max_time:.2f} seconds.")
         min_time = min(times)
         print(f"Min time over {len(times)} games: {min_time:.2f} seconds.")
-        avg_attempts = sum(needed_attempts) / 10
-        print(f"Average attempts over {len(times)} games: {avg_attempts:.2f} attempts.")
+        avg_attempts = sum(needed_attempts) / len(needed_attempts)
+        print(f"Average attempts over {len(needed_attempts)} games: {avg_attempts:.2f} attempts.")
         max_attempts = max(needed_attempts)
-        print(f"Max attempts over {len(times)} games: {max_attempts} attempts.")
+        print(f"Max attempts over {len(needed_attempts)} games: {max_attempts} attempts.")
         min_attempts = min(needed_attempts)
-        print(f"Min attempts over {len(times)} games: {min_attempts} attempts.")
-
+        print(f"Min attempts over {len(needed_attempts)} games: {min_attempts} attempts.")

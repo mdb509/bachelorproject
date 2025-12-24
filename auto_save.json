@@ -30,9 +30,58 @@
       }
     }
   },
-  "guesses": [],
-  "current_attempts": 0,
-  "is_over": false,
-  "is_won": false,
-  "secret_code": "GYRP"
+  "guesses": [
+    {
+      "guess": [
+        "R",
+        "R",
+        "G",
+        "G"
+      ],
+      "feedback": [
+        0,
+        1
+      ]
+    },
+    {
+      "guess": [
+        "G",
+        "B",
+        "Y",
+        "Y"
+      ],
+      "feedback": [
+        2,
+        0
+      ]
+    },
+    {
+      "guess": [
+        "O",
+        "G",
+        "O",
+        "P"
+      ],
+      "feedback": [
+        2,
+        1
+      ]
+    },
+    {
+      "guess": [
+        "G",
+        "B",
+        "O",
+        "P"
+      ],
+      "feedback": [
+        4,
+        0
+      ]
+    }
+  ],
+  "current_attempts": 4,
+  "is_over": true,
+  "is_won": true,
+  "secret_code": "GBOP"
 }

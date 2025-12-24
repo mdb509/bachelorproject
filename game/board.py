@@ -44,12 +44,18 @@ class Board:
         self.is_over = False
         self.is_won = False
 
-    def initialize_game(self):
+    def initialize_game(self, code: str = None):
         """
         Set up a new game: generate a secret code and reset state.
+
+        Args:
+            code (str, optional): Specific code to set as the secret code. If None, a random code is generated.
         """
         self.secret_code = Code(rules=self.rules)
-        self.secret_code.generate_random()
+        if code is None:
+            self.secret_code.generate_random()
+        else:
+            self.set_code(code)
         self.guesses = []
         self.current_attempt = 0
         self.is_over = False
@@ -212,3 +218,11 @@ class Board:
                 attempt_line += "|    "
             print(attempt_line + "|")
             print(line)
+    
+    def set_code(self,code: str):
+        """
+        Set the secret code to a specific value (for testing).
+        Args:
+            code (str): The code string to set as the secret code.
+        """
+        self.secret_code = Code(code)
