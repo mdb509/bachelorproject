@@ -39,16 +39,28 @@
         "G"
       ],
       "feedback": [
-        0,
+        1,
         1
       ]
     },
     {
       "guess": [
-        "G",
+        "R",
+        "R",
         "B",
-        "Y",
         "Y"
+      ],
+      "feedback": [
+        0,
+        0
+      ]
+    },
+    {
+      "guess": [
+        "G",
+        "O",
+        "G",
+        "O"
       ],
       "feedback": [
         2,
@@ -57,21 +69,21 @@
     },
     {
       "guess": [
-        "O",
         "G",
-        "O",
+        "G",
+        "G",
         "P"
       ],
       "feedback": [
-        2,
-        1
+        3,
+        0
       ]
     },
     {
       "guess": [
         "G",
-        "B",
-        "O",
+        "P",
+        "G",
         "P"
       ],
       "feedback": [
@@ -80,8 +92,8 @@
       ]
     }
   ],
-  "current_attempts": 4,
+  "current_attempts": 5,
   "is_over": true,
   "is_won": true,
-  "secret_code": "GBOP"
+  "secret_code": "GPGP"
 }

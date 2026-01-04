@@ -13,14 +13,13 @@ from solver.dinmacs import Dinmacs
 from solver.solver_manager import MinimaxConfig, MinimaxSolver
 from solver.solver_interface import SatSolverInterface
 from state.persistence import save_state
-from ui.cli import gameloop
 
 
 # Config
 code_length = DEFAULT_RULES["code_length"]
 num_colors = DEFAULT_RULES["num_colors"]
 colors = DEFAULT_RULES["colors"]
-backend = "bc_enum"  # "dualiza" | "ganak" | "bc_enum"
+backend = "dualiza"  # "dualiza" | "ganak" | "bc_enum"
 rounds_to_play = 10
 
 # Create symbol variables
@@ -50,8 +49,8 @@ dualiza_counting = ["-c", "-r", projected_variables]
 dualiza_minimal_prep_args = ["-c",
     "-r", projected_variables,
     "--project=1",
-    "--dual=1",
-    "--discount=1",
+    "--dual=0",
+    "--discount=0",
     "--block=0",
     "--elim=0",
     "--subsume=0",
@@ -121,7 +120,7 @@ if __name__ == "__main__":
             dinmacs_lock = threading.Lock()
             solver_api = SatSolverInterface()
             solver_api.build_tool("dualiza")
-            solver_api.build_tool("bc_enum")
+            # solver_api.build_tool("bc_enum")
             mm = MinimaxSolver(
                 config=MinimaxConfig(backend=backend),
                 solver_api=solver_api,
