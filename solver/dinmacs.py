@@ -3,9 +3,6 @@ import os
 from game.ruleset import DEFAULT_RULES
 from pathlib import Path
 
-CODE_LENGTH = DEFAULT_RULES["code_length"]
-NUM_COLORS = DEFAULT_RULES["num_colors"]
-
 
 class Dinmacs:
     """
@@ -16,12 +13,15 @@ class Dinmacs:
         id_to_name (dict[int, str]): Mapping from integer IDs to variable names.
     """
 
-    def __init__(self):
+    def __init__(self, rules= None):
         """
         Initialize the Dinmacs encoder/decoder.
         """
         self.name_to_id: dict[str, int] = {}
         self.id_to_name: dict[int, str] = {}
+        self.rules = rules or DEFAULT_RULES
+        self.code_length = self.rules["code_length"]
+        self.num_colors = self.rules["num_colors"]
 
     def _get_id(self, name: str) -> int:
         """
@@ -107,10 +107,10 @@ class Dinmacs:
             f.writelines(
                 (" ".join(map(str, claus)) + " 0\n" for claus in clauses)
             )
-            f.write(
-                "c p show "
-                + " ".join(
-                    str(i) for i in range(1, NUM_COLORS * CODE_LENGTH + 1)
-                )
-                + " 0\n"
-            )
+            # f.write(
+            #     "c p show "
+            #     + " ".join(
+            #         str(i) for i in range(1, self.num_colors * self.code_length + 1)
+            #     )
+            #     + " 0\n"
+            # )

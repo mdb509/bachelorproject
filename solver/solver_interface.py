@@ -20,8 +20,8 @@ class SatSolverInterface:
         self.DUALIZER_BIN = (self.DUALIZER_DIR / "dualiza").resolve()
         # Ganak: Path for direction and binary
         self.GANAK_DIR = (self.HERE / "../../ganak").resolve()
-        self.GANAK_OUT = (self.GANAK_DIR / "ganak-result").resolve()
-        self.GANAK_BIN = (self.GANAK_OUT / "bin" / "ganak").resolve()
+        self.GANAK_OUT = (self.GANAK_DIR / "ganak-result").absolute()
+        self.GANAK_BIN = (self.GANAK_OUT / "bin" / "ganak").absolute()
         # BCEnum: Path for direction and binary
         self.BC_ENUM_DIR = (self.HERE / "../../master_project/blocked_clauses_enumeration").resolve()
         self.BC_ENUM_BIN = (self.BC_ENUM_DIR / "src" / "bcp_enum").resolve()
@@ -128,9 +128,6 @@ class SatSolverInterface:
             FileNotFoundError: If the tool binary is not found.
             RuntimeError: If tool execution fails.
         """
-        if tool_name == "ganak":
-            print("Building Ganak using Nix...")
-            self.build_tool("ganak")
         # Get tool spec
         tool = self.tools.get(tool_name)
         # Validate tool

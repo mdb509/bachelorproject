@@ -245,5 +245,6 @@ class Cnf:
 
         for guess in self.guesses:
             clauses.extend(self.build_constraints(guess))
-        print("length of clauses", len(clauses))
+        # debug log
+        # print(len(clauses), "clauses built for full history")
         return clauses

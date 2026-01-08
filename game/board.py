@@ -225,4 +225,4 @@ class Board:
         Args:
             code (str): The code string to set as the secret code.
         """
-        self.secret_code = Code(code)
+        self.secret_code = Code(code, self.rules)

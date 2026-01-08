@@ -4,7 +4,7 @@ import os
 import threading
 import time
 import random
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor,wait, FIRST_COMPLETED
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
@@ -16,7 +16,7 @@ from solver.dinmacs import Dinmacs
 from solver.solver_interface import SatSolverInterface
 
 
-Backend = Literal["dualiza", "ganak"]
+Backend = Literal["dualiza", "ganak", "bc_enum"]
 
 
 # drop-in helper for progress and log line
@@ -56,8 +56,7 @@ class MinimaxSolver:
         code_length: int
         num_colors: int
         decode_variable_map: dict[str, str]
-        dualiza_args: list[str]
-        ganak_args: list[str]
+        tool_args: list[str]
         feedbacks: list[tuple[int, int]]
         all_combinations: list[tuple[str, ...]]
 
@@ -129,14 +128,14 @@ class MinimaxSolver:
         g = Guess(list(guess_sequence))
         g.apply_feedback(feedback=fb)
         claus = encoder.build_constraints(g)
-
+        
         # build dinmacs CNF
         # lock dinmacs usage
         with self.dinmacs_lock:
             encoded_delta = self.dinmacs.encode_clauses(claus)
             solv_clauses = encoded_base_clauses + encoded_delta
             self.dinmacs.build_dinmacs(str(cnf_path), clauses=solv_clauses)
-
+        # run solver
         stdout = self.solver_api.run_tool(
             tool_name=self.cfg.backend,
             input_file=str(cnf_path),
@@ -153,7 +152,7 @@ class MinimaxSolver:
         elif self.cfg.backend == "bc_enum":
             # bc enum: count
             cnt = self.solver_api.parse_bc_enum_stdout(stdout)
-        return cnt
+        return cnt, len(solv_clauses)
 
     def _evaluate_guess(
         self,
@@ -186,7 +185,7 @@ class MinimaxSolver:
                 return guess_sequence, self.cfg.stop_sentinel, None
 
             # Count solutions for this guess and feedback
-            cnt = self._count_for_guess_feedback(
+            cnt, claus_len = self._count_for_guess_feedback(
                 encoder=encoder,
                 encoded_base_clauses=encoded_base_clauses,
                 guess_sequence=guess_sequence,
@@ -198,7 +197,7 @@ class MinimaxSolver:
                     max_cnt = cnt
                     max_fb = fb
 
-        return guess_sequence, max_cnt, max_fb
+        return guess_sequence, max_cnt, max_fb, claus_len
 
 
     def choose_guess(
@@ -207,6 +206,7 @@ class MinimaxSolver:
         encoder: Cnf,
         encoded_base_clauses,
         progress: bool = True,
+        timeout_s: float | None = None,
     ) -> tuple[
         tuple[str, ...], int, tuple[int, int] | None, list[str] | None
     ]:
@@ -219,81 +219,129 @@ class MinimaxSolver:
         Returns:
           best_guess, best_worst_case, best_worst_fb, optional_model_guess
         """
+        # setup for parallel evaluation
         stop_event = threading.Event()
-
         best_guess = None
         best_minmax_cnt = float("inf")
         best_minmax_fb = None
 
+        # timing and progress
         start = time.perf_counter()
+        deadline = (start + timeout_s) if timeout_s is not None else None
+        
+        # progress tracking
         last_report = start
         done = 0
         total = len(self.all_combinations)
 
+        # iterator over all combinations
+        it = iter(self.all_combinations)
+        in_flight = set()
+
+
+        def submit_one():
+            """
+            Submit one guess evaluation to the thread pool.
+            """
+            gs = next(it)
+            return pool.submit(
+                self._evaluate_guess,
+                encoder=encoder,
+                encoded_base_clauses=encoded_base_clauses,
+                guess_sequence=gs,
+                stop_event=stop_event,
+            )
+
         # use ThreadPoolExecutor for parallel evaluation
-        pool = ThreadPoolExecutor(max_workers=self.cfg.max_workers)
-        futures = []
-        try:
-            # submit all guess evaluations
-            for gs in self.all_combinations:
-                futures.append(
-                    pool.submit(
-                        self._evaluate_guess,
-                        encoder=encoder,
-                        encoded_base_clauses=encoded_base_clauses,
-                        guess_sequence=gs,
-                        stop_event=stop_event,
-                    )
+        with ThreadPoolExecutor(max_workers=self.cfg.max_workers) as pool:
+            # initially fill the in-flight set
+            try:
+                for _ in range(self.cfg.max_workers):
+                    in_flight.add(submit_one())
+            except StopIteration:
+                pass
+            claus_len = 0
+            # main loop: wait for completions and submit new tasks
+            while in_flight:
+                # check for timeout
+                now = time.perf_counter()
+                if deadline is not None and now >= deadline:
+                    stop_event.set()
+                    break
+
+                # wait for at least one to complete
+                wait_timeout = 1.0
+                if deadline is not None:
+                    wait_timeout = max(0.0, min(wait_timeout, deadline - now))
+                
+                # wait for any future to complete
+                done_set, not_done_set = wait(
+                    in_flight, timeout=wait_timeout, return_when=FIRST_COMPLETED
                 )
 
-            # collect results as they complete
-            for fut in as_completed(futures):
-                gs, minmax_cnt, minmax_fb = fut.result()
-                done += 1
-                # New best guess found
-                # minmax_fb = (black, white)
-                if minmax_cnt > 0:
-                    key = (minmax_cnt, -minmax_fb[0], -minmax_fb[1])
-
-                    # with first guess, we always take it
-                    if best_guess is None:
-                        best_guess = gs
-                        best_minmax_cnt = minmax_cnt
-                        best_minmax_fb = minmax_fb
-                    # else, compare with current best
-                    else:
-                        best_key = (
-                            best_minmax_cnt,
-                            -best_minmax_fb[0],
-                            -best_minmax_fb[1],
+                if not done_set:
+                    now2 = time.perf_counter()
+                    # periodic progress report
+                    if progress and now2 - last_report >= 1.0:
+                        rate = done / max(1e-9, (now2 - start))
+                        progress_print(
+                            f"Progress: {done}/{total} guesses ({rate:.1f} guesses/sec)"
                         )
-                        if key < best_key:
+                        last_report = now2
+                    continue
+
+                # collect results as they complete
+                for fut in done_set:
+                    # remove from in-flight
+                    in_flight.remove(fut)
+                    # get result
+                    gs, minmax_cnt, minmax_fb, claus_len = fut.result()
+                    done += 1
+
+                    # New best guess found
+                    if minmax_cnt > 0 and minmax_fb is not None:
+                        key = (minmax_cnt, -minmax_fb[0], -minmax_fb[1])
+
+                        # with first guess, we always take it
+                        if best_guess is None:
                             best_guess = gs
                             best_minmax_cnt = minmax_cnt
                             best_minmax_fb = minmax_fb
 
-                            log_print(
-                                f"new best guess : {best_guess}\n"
-                                f"with fb        : {best_minmax_fb}\n"
-                                f"new best key   : {key}\n"
+                        # else, compare with current best
+                        else:
+                            best_key = (
+                                best_minmax_cnt,
+                                -best_minmax_fb[0],
+                                -best_minmax_fb[1],
                             )
+                            if key < best_key:
+                                best_guess = gs
+                                best_minmax_cnt = minmax_cnt
+                                best_minmax_fb = minmax_fb
+
+                                # log_print(
+                                #     f"new best guess : {best_guess}\n"
+                                #     f"with fb        : {best_minmax_fb}\n"
+                                #     f"new best key   : {key}\n"
+                                # )
+
+                    # Early stopping condition
+                    if not stop_event.is_set():
+                        try:
+                            in_flight.add(submit_one())
+                        except StopIteration:
+                            pass
 
                 # periodic progress report
-                now = time.perf_counter()
-                if progress and now - last_report >= 2.0:
-                    rate = done / max(1e-9, (now - start))
+                now3 = time.perf_counter()
+                if progress and now3 - last_report >= 1.0:
+                    rate = done / max(1e-9, (now3 - start))
                     progress_print(
                         f"Progress: {done}/{total} guesses ({rate:.1f} guesses/sec)"
                     )
-                    last_report = now
-
-        finally:
-            try:
-                # ensure proper shutdown
-                pool.shutdown(wait=True, cancel_futures=True)
-            except TypeError:
-                for f in futures:
-                    f.cancel()
-                pool.shutdown(wait=True)
-
-        return best_guess
+                    last_report = now3
+            if stop_event.is_set():
+                for fut in in_flight:
+                    fut.cancel()
+        return best_guess, claus_len 

@@ -19,7 +19,7 @@ class GameState:
 
     def __init__(
         self,
-        rules=DEFAULT_RULES,
+        rules=None,
         guesses=None | list[Guess],
         current_attempts=0,
         is_over=False,
@@ -27,7 +27,7 @@ class GameState:
         code=Code().generate_random(),
     ):
         """Initialize a new GameState instance."""
-        self.rules = rules
+        self.rules = rules or DEFAULT_RULES
         self.guesses = guesses if guesses is not None else []
         self.current_attempts = current_attempts
         self.is_over = is_over
