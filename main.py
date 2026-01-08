@@ -316,7 +316,7 @@ def benchmark_all_codes(
 
             games_processed += 1
             # limit to 1000 games for benchmarking purposes
-            if games_processed >= 10:
+            if games_processed >= 1000:
                 print("Limiting to 1000 games for benchmarking purposes.")
                 break
 
@@ -437,16 +437,14 @@ def benchmark_grid(
 if __name__ == "__main__":
     # Configuration
     out_path = "benchmark_all.json"
-    solvers = ["ganak"] # choose from dualiza | ganak | bc_enum
-    run_timeout = 600.0  # timeout time per turn
+    solvers = ["dualiza", "ganak", "bc_enum"] # choose from dualiza | ganak | bc_enum
+    run_timeout = 10.0  # timeout time per turn
     # Load or initialize dataset
     dataset = _load_dataset(out_path)
     dataset.setdefault("runs", {})
     # Benchmark grid settings
-    # pegs = [4, 8, 10, 4]
-    # colors = [range(1,17), range(1,17), range(1,17), 6]
-    pegs = [4]
-    colors = [6]
+    pegs = [4, 8, 10, 4]
+    colors = [range(1,17), range(1,17), range(1,17), 6]
     # Run benchmarks
     for solver in solvers:
         print(f"\nStarting benchmarks for solver: {solver}\n")
