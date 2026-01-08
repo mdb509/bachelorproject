@@ -26,6 +26,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Ignore png
+*.png
+
 # Ignore Python virtual environment
 venv/
 .env/

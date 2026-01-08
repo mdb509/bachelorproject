@@ -1,0 +1,4 @@
+matplot==0.1.9
+matplotlib==3.10.8
+numpy==2.4.0
+
