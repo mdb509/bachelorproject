@@ -443,8 +443,10 @@ if __name__ == "__main__":
     dataset = _load_dataset(out_path)
     dataset.setdefault("runs", {})
     # Benchmark grid settings
-    pegs = [4, 8, 10, 4]
-    colors = [range(1,17), range(1,17), range(1,17), 6]
+    # pegs = [4, 8, 10, 4]
+    # colors = [range(1,17), range(1,17), range(1,17), 6]
+    pegs = [4]
+    colors = [2]
     # Run benchmarks
     for solver in solvers:
         print(f"\nStarting benchmarks for solver: {solver}\n")
