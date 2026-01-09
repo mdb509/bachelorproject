@@ -253,7 +253,8 @@ class MinimaxSolver:
             )
 
         # use ThreadPoolExecutor for parallel evaluation
-        with ThreadPoolExecutor(max_workers=self.cfg.max_workers) as pool:
+        with ThreadPoolExecutor(max_workers=self.cfg.max_workers -1) as pool:
+            print("Max Workers (CPUs): ", self.cfg.max_workers)
             # initially fill the in-flight set
             try:
                 for _ in range(self.cfg.max_workers):
