@@ -438,15 +438,13 @@ if __name__ == "__main__":
     # Configuration
     out_path = "benchmark_all.json"
     solvers = ["dualiza", "ganak", "bc_enum"] # choose from dualiza | ganak | bc_enum
-    run_timeout = 10.0  # timeout time per turn
+    run_timeout = 3600.0  # timeout time per turn
     # Load or initialize dataset
     dataset = _load_dataset(out_path)
     dataset.setdefault("runs", {})
     # Benchmark grid settings
-    # pegs = [4, 8, 10, 4]
-    # colors = [range(1,17), range(1,17), range(1,17), 6]
-    pegs = [4]
-    colors = [2]
+    pegs = [4, 8, 10, 4]
+    colors = [range(1,17), range(1,17), range(1,17), 6]
     # Run benchmarks
     for solver in solvers:
         print(f"\nStarting benchmarks for solver: {solver}\n")
