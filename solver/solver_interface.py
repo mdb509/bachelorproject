@@ -19,9 +19,9 @@ class SatSolverInterface:
         self.DUALIZER_DIR = (self.HERE / "../../dualiza").resolve()
         self.DUALIZER_BIN = (self.DUALIZER_DIR / "dualiza").resolve()
         # Ganak: Path for direction and binary
-        self.GANAK_DIR = (self.HERE / "../../ganak").resolve()
-        self.GANAK_OUT = (self.GANAK_DIR / "ganak-result").absolute()
-        self.GANAK_BIN = (self.GANAK_OUT / "bin" / "ganak").absolute()
+        self.GANAK_DIR = (self.HERE / "../../ganak-linux-amd64").resolve()
+        self.GANAK_OUT = (self.GANAK_DIR ).absolute()
+        self.GANAK_BIN = (self.GANAK_OUT / "ganak").absolute()
         # BCEnum: Path for direction and binary
         self.BC_ENUM_DIR = (self.HERE / "../../master_project/blocked_clauses_enumeration").resolve()
         self.BC_ENUM_BIN = (self.BC_ENUM_DIR / "src" / "bcp_enum").resolve()
@@ -83,6 +83,8 @@ class SatSolverInterface:
         Builds the specified tool by running its build args.
         Raises RuntimeError if any step fails.
         """
+        if tool_name == "ganak":
+            return
         if tool_name == "bc_enum":
             self.build_tool("cadical")
         
