@@ -219,6 +219,18 @@ class MinimaxSolver:
         Returns:
           best_guess, best_worst_case, best_worst_fb, optional_model_guess
         """
+        # check cpu usage
+        print("cpu_count:", os.cpu_count())
+        print("affinity :", len(os.sched_getaffinity(0)), sorted(os.sched_getaffinity(0)))
+
+        p = Path("/sys/fs/cgroup/cpu.max")
+        if p.exists():
+            print("cpu.max  :", p.read_text().strip())
+
+        p = Path("/sys/fs/cgroup/cpuset.cpus.effective")
+        if p.exists():
+            print("cpuset.effective:", p.read_text().strip())
+            
         # setup for parallel evaluation
         stop_event = threading.Event()
         best_guess = None
@@ -253,8 +265,7 @@ class MinimaxSolver:
             )
 
         # use ThreadPoolExecutor for parallel evaluation
-        with ThreadPoolExecutor(max_workers=self.cfg.max_workers -1) as pool:
-            print("Max Workers (CPUs): ", self.cfg.max_workers)
+        with ThreadPoolExecutor(max_workers=self.cfg.max_workers) as pool:
             # initially fill the in-flight set
             try:
                 for _ in range(self.cfg.max_workers):
