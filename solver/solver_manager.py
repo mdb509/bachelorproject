@@ -34,7 +34,7 @@ def log_print(msg: str) -> None:
 @dataclass(frozen=True)
 class MinimaxConfig:
     backend: Backend = "dualiza"
-    max_workers: int = max(1, (os.cpu_count() - 1 or 4))
+    max_workers: int = max(1, (os.cpu_count() or 4))
     # high return value to indicate stop
     stop_sentinel: int = 10**18
 
@@ -219,18 +219,18 @@ class MinimaxSolver:
         Returns:
           best_guess, best_worst_case, best_worst_fb, optional_model_guess
         """
-        # check cpu usage
-        print("cpu_count:", os.cpu_count())
-        print("affinity :", len(os.sched_getaffinity(0)), sorted(os.sched_getaffinity(0)))
+        # # check cpu usage
+        # print("cpu_count:", os.cpu_count())
+        # print("affinity :", len(os.sched_getaffinity(0)), sorted(os.sched_getaffinity(0)))
 
-        p = Path("/sys/fs/cgroup/cpu.max")
-        if p.exists():
-            print("cpu.max  :", p.read_text().strip())
+        # p = Path("/sys/fs/cgroup/cpu.max")
+        # if p.exists():
+        #     print("cpu.max  :", p.read_text().strip())
 
-        p = Path("/sys/fs/cgroup/cpuset.cpus.effective")
-        if p.exists():
-            print("cpuset.effective:", p.read_text().strip())
-            
+        # p = Path("/sys/fs/cgroup/cpuset.cpus.effective")
+        # if p.exists():
+        #     print("cpuset.effective:", p.read_text().strip())
+
         # setup for parallel evaluation
         stop_event = threading.Event()
         best_guess = None

@@ -299,9 +299,9 @@ def benchmark_all_codes(
                 # record clause length
                 per_game_clause_len.append(clausle_len)
 
+                board.render()
                 # check for win/over
                 if board.is_won or board.is_over:
-                    board.render()
                     break
                 
             # end per-game turns
@@ -444,7 +444,7 @@ if __name__ == "__main__":
     dataset.setdefault("runs", {})
     # Benchmark grid settings
     pegs = [4, 8, 10, 4]
-    colors = [range(1,17), range(1,17), range(1,17), 6]
+    colors = [6, range(1,17), range(1,17), range(1,17)]
     # Run benchmarks
     for solver in solvers:
         print(f"\nStarting benchmarks for solver: {solver}\n")
